@@ -1,0 +1,19 @@
+{
+  "name": "form-url-saver-lib",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "@angular/common": "^14.2.0",
+    "@angular/core": "^14.2.0",
+    "@angular/forms": "^14.2.0",
+    "@angular/router": "^14.2.0"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "luxon": "^3.1.1",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.191",
+    "@types/luxon": "^3.1.0"
+  }
+}
