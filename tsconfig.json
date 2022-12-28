@@ -9,7 +9,8 @@
     "noImplicitOverride": true,
     "paths": {
       "form-url-saver-lib": [
-        "dist/form-url-saver-lib"
+        "dist/form-url-saver-lib",
+        "dist/form-url-saver-lib/lib",
       ]
     },
     "noPropertyAccessFromIndexSignature": true,
