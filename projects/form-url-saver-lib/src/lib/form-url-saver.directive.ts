@@ -25,6 +25,7 @@ const formDirectiveProvider = {
 };
 
 /**
+ * @description
  * Директива является наследником Angular `FormGroupDirective`
  * и используется для автоматической записи значения `FormGroup` в query-параметры.
  *
@@ -33,7 +34,13 @@ const formDirectiveProvider = {
  * Если поле формы является объектом, его значение будет записано в query
  * в формате строки (_JSON.stringify_), по ключу complex-`Имя поля`
  *
- * {@link https://github.com/angular/angular/blob/main/packages/forms/src/directives/reactive_directives/form_group_directive.ts Agnular FormGroupDirective}
+ * @property {number} `debounceTime` - Время задержки.
+ *
+ * @property {DateTime} `useDateTime` - использовать дату. По умолчанию `false`.
+ *
+ * @property {UntypedFormGroup} `form` - ссылка на форму.
+ *
+ * {@link https://github.com/angular/angular/blob/main/packages/forms/src/directives/reactive_directives/form_group_directive.ts Angular FormGroupDirective}
  */
 @Directive({
     selector: '[ngxFormUrlSaver]',
