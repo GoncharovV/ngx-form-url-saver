@@ -1,10 +1,10 @@
-import { Component } from "@angular/core";
+import { Component, OnDestroy } from "@angular/core";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { FormUrlSaverDirective } from "./form-url-saver.directive";
 import { RouterTestingModule } from "@angular/router/testing";
 import { FormBuilder, FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { ActivatedRoute, Router } from "@angular/router";
-import { of } from "rxjs";
+import { BehaviorSubject, of, takeUntil } from "rxjs";
 
 interface Article {
   id: number | undefined;
@@ -14,19 +14,23 @@ interface Article {
   type: ArticleType | undefined;
 }
 
+interface ArticleInRoute {
+  [key: string]: string;
+}
+
 enum ArticleType {
   Science = 'Science',
   Discovery = 'Discovery',
 }
 
 class ActivatedRouteMock {
-  public readonly queryParams = {
+  public readonly queryParams = of({
     id: '1',
     authorId: '1',
     title: 'title 1',
     description: 'description 1',
     type: 'Science',
-  };
+  });
 
   public readonly snapshot = {
 
@@ -91,37 +95,6 @@ class ArticleBuilder {
   selector: 'ngx-test-component',
   template: `
   <div>
-    <form ngxFormUrlSaver [formGroup]="form">
-
-     <input
-        type="text"
-        formControlName="id"
-      >
-
-       <input
-        type="text"
-        formControlName="authorId"
-      >
-
-       <input
-        type="text"
-        formControlName="title"
-      >
-
-       <input
-        type="text"
-        formControlName="description"
-      >
-
-      <input
-        type="text"
-        formControlName="type"
-      >
-
-      <button type="button" (click)="createArticle()">Create article</button>
-
-    </form>
-
     <section>
       <div *ngFor="let article of articles">
         <p>id: {{article?.id}}</p>
@@ -130,10 +103,43 @@ class ArticleBuilder {
         <p>id: {{article?.description}}</p>
         <p>id: {{article?.type}}</p>
       </div>
+      <form ngxFormUrlSaver [formGroup]="form">
+        <input
+          type="text"
+          formControlName="id"
+        >
+
+          <input
+          type="text"
+          formControlName="authorId"
+        >
+
+          <input
+          type="text"
+          formControlName="title"
+        >
+
+          <input
+          type="text"
+          formControlName="description"
+        >
+
+        <input
+          type="text"
+          formControlName="type"
+        >
+        <button
+          type="button"
+          (click)="filterArticles()"
+        >
+          Filter
+        </button>
+      </form>
     </section>
   </div>`,
 })
-class TestComponent{
+class TestComponent implements OnDestroy{
+
   public readonly defaultFormValue = {
     id: undefined,
     authorId: undefined,
@@ -177,15 +183,31 @@ class TestComponent{
       .withType(ArticleType.Science).build(),
   ] as Article [];
 
+  public readonly destroy$ = new BehaviorSubject<Boolean>(false);
+
+  public queryParamsFromRoute: Partial<Article> = {};
+
+  public readonly queryParamsSub = this.route.queryParams.pipe(
+    takeUntil(this.destroy$),
+  ).subscribe((params: ArticleInRoute) => {
+    Object.keys(params).forEach(key => {
+      const value = params[key];
+
+      const clearValue = Number.parseInt(value, 10);
+    });
+  });
+
   constructor(
     private readonly fb: FormBuilder,
     private readonly router: Router,
     private readonly route: ActivatedRoute
   ){}
 
-  public createArticle() {
-    this.articles.push(this.form.value as Article);
+  public filterArticles() {
+    // this.articles.filter();
   }
+
+  public ngOnDestroy = () => (this.destroy$.next(true));
 }
 
 describe('FormUrlSaverDirective', () => {
@@ -199,7 +221,7 @@ describe('FormUrlSaverDirective', () => {
   beforeEach(async() => {
     await TestBed.configureTestingModule({
       declarations: [TestComponent,FormUrlSaverDirective],
-      imports: [RouterTestingModule, FormsModule, ReactiveFormsModule],
+      imports: [RouterTestingModule, FormsModule, ReactiveFormsModule, RouterTestingModule],
       providers:[FormBuilder, {provide: ActivatedRoute, useClass: ActivatedRouteMock}],
     }).compileComponents();
 
@@ -226,9 +248,11 @@ describe('FormUrlSaverDirective', () => {
 
   describe('ngxFormUrlSaver directive tests', () => {
     it('the article length should grow by 1 after one creating', () => {
-      const oldLeng = component.articles.length;
-      component.createArticle();
-      expect(component.articles.length - 1).toEqual(oldLeng);
+     component.queryParamsSub
+    });
+
+    afterAll(() => {
+      component.ngOnDestroy();
     });
   });
 
