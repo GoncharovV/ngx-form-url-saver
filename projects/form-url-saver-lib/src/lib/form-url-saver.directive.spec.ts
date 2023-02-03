@@ -4,92 +4,29 @@ import { FormUrlSaverDirective } from "./form-url-saver.directive";
 import { RouterTestingModule } from "@angular/router/testing";
 import { FormBuilder, FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { ActivatedRoute, Router } from "@angular/router";
-import { BehaviorSubject, of, takeUntil } from "rxjs";
-
-interface Article {
-  id: number | undefined;
-  authorId: number | undefined;
-  title: string | undefined;
-  description: string | undefined;
-  type: ArticleType | undefined;
-}
-
-interface ArticleInRoute {
-  [key: string]: string;
-}
-
-enum ArticleType {
-  Science = 'Science',
-  Discovery = 'Discovery',
-}
+import { BehaviorSubject, map, of, shareReplay, takeUntil, tap } from "rxjs";
+import * as _ from "lodash";
+import { TestScheduler } from "rxjs/testing";
+import { ArticleType } from "../enums/article-type";
+import { Article } from "../models/article";
+import { ArticleInRoute } from "../models/article-in-route";
+import { ArticleBuilder } from "../models/article-builder";
 
 class ActivatedRouteMock {
   public readonly queryParams = of({
-    id: '1',
-    authorId: '1',
-    title: 'title 1',
-    description: 'description 1',
+    id: '10',
+    authorId: '10',
+    title: 'title 10',
+    description: 'description 10',
     type: 'Science',
   });
 
   public readonly snapshot = {
 
-    queryParams: {
-      id: '2',
-      authorId: '2',
-      title: 'title 3',
-      description: 'description 1',
-      type: 'Science',
-    }
+    queryParams: {}
 
   };
 }
-
-class ArticleBuilder {
-  constructor(
-    private _id ?: number,
-    private _authorId ?: number,
-    private _title ?:string,
-    private _description ?:string,
-    private _type ?: ArticleType
-  ){}
-
-  public withId(id: number) {
-    this._id = id;
-    return this;
-  }
-
-  public withAuthorId(id: number) {
-    this._authorId = id;
-    return this;
-  }
-
-  public withTitle(title: string) {
-    this._title = title;
-    return this;
-  }
-
-  public withDescription(description: string) {
-    this._description = description;
-    return this;
-  }
-
-  public withType(type: ArticleType) {
-    this._type = type;
-    return this;
-  }
-
-  public build () {
-    return {
-      id: this._id,
-      authorId: this._authorId,
-      title: this._title,
-      description: this._description,
-      type: this._type
-    } as Article;
-  };
-}
-
 
 @Component({
   selector: 'ngx-test-component',
@@ -98,10 +35,10 @@ class ArticleBuilder {
     <section>
       <div *ngFor="let article of articles">
         <p>id: {{article?.id}}</p>
-        <p>id: {{article?.authorId}}</p>
-        <p>id: {{article?.title}}</p>
-        <p>id: {{article?.description}}</p>
-        <p>id: {{article?.type}}</p>
+        <p>authorId: {{article?.authorId}}</p>
+        <p>title: {{article?.title}}</p>
+        <p>description: {{article?.description}}</p>
+        <p>type: {{article?.type}}</p>
       </div>
       <form ngxFormUrlSaver [formGroup]="form">
         <input
@@ -185,17 +122,29 @@ class TestComponent implements OnDestroy{
 
   public readonly destroy$ = new BehaviorSubject<Boolean>(false);
 
+  public readonly valueChanges = this.form.valueChanges;
+
   public queryParamsFromRoute: Partial<Article> = {};
 
-  public readonly queryParamsSub = this.route.queryParams.pipe(
-    takeUntil(this.destroy$),
-  ).subscribe((params: ArticleInRoute) => {
-    Object.keys(params).forEach(key => {
-      const value = params[key];
+  public readonly queryParamsObservable = this.route.queryParams.pipe(
+    shareReplay({
+      refCount: true,
+      bufferSize: 1,
+    }),
+  );
 
-      const clearValue = Number.parseInt(value, 10);
-    });
-  });
+  public readonly parsedParamsObservable = this.queryParamsObservable.pipe(
+    map((params: ArticleInRoute) => this.parseArticleFromRoute(params)),
+    tap((params) => {
+      this.queryParamsFromRoute = params;
+
+      this.form.patchValue(this.queryParamsFromRoute);
+    }),
+  );
+
+  public readonly queryParamsSub = this.parsedParamsObservable.pipe(
+    takeUntil(this.destroy$),
+  ).subscribe();
 
   constructor(
     private readonly fb: FormBuilder,
@@ -204,7 +153,19 @@ class TestComponent implements OnDestroy{
   ){}
 
   public filterArticles() {
-    // this.articles.filter();
+  //  this.articles.filter();
+  }
+
+  public parseArticleFromRoute(params: ArticleInRoute) {
+    const queryParamsFromRoute = {
+      id: params.id ? parseInt(params.id, 10): undefined,
+      authorId: params.authorId ? parseInt(String(params.authorId), 10): undefined,
+      title: params.title? params.title : undefined,
+      description: params.description ? params.description : undefined,
+      type: params.type ? params.type as ArticleType : undefined,
+    };
+
+    return  queryParamsFromRoute;
   }
 
   public ngOnDestroy = () => (this.destroy$.next(true));
@@ -217,18 +178,37 @@ describe('FormUrlSaverDirective', () => {
   let router: Router;
   let route: ActivatedRoute;
   let directive: FormUrlSaverDirective;
+  let testScheduler: TestScheduler;
 
   beforeEach(async() => {
     await TestBed.configureTestingModule({
-      declarations: [TestComponent,FormUrlSaverDirective],
-      imports: [RouterTestingModule, FormsModule, ReactiveFormsModule, RouterTestingModule],
-      providers:[FormBuilder, {provide: ActivatedRoute, useClass: ActivatedRouteMock}],
+      declarations: [
+        TestComponent,
+        FormUrlSaverDirective
+      ],
+      imports: [
+        RouterTestingModule,
+        FormsModule,
+        ReactiveFormsModule,
+        RouterTestingModule
+      ],
+      providers:[
+        FormBuilder, {
+          provide: ActivatedRoute,
+          useClass: ActivatedRouteMock
+        }
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestComponent);
     fb = TestBed.inject(FormBuilder);
     router = TestBed.inject(Router);
     route = TestBed.inject(ActivatedRoute);
+
+    testScheduler = new TestScheduler((actual, expected) => {
+      expect(actual).toEqual(expected);
+    });
+
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
@@ -242,13 +222,21 @@ describe('FormUrlSaverDirective', () => {
 
     it(`the initial article length should be equal to 5`, () => {
       expect(component.articles.length).toEqual(5);
-    })
+    });
 
   });
 
   describe('ngxFormUrlSaver directive tests', () => {
-    it('the article length should grow by 1 after one creating', () => {
-     component.queryParamsSub
+    it('The first form value should be equal value from route', () => {
+      const paramsSub = component.parsedParamsObservable.subscribe((params) => {
+        const queryParamsFromRoute = params;
+
+        const isEqual = _.isEqual(component.form.value, queryParamsFromRoute);
+
+        expect(isEqual).toEqual(true);
+      });
+
+      paramsSub.unsubscribe();
     });
 
     afterAll(() => {
