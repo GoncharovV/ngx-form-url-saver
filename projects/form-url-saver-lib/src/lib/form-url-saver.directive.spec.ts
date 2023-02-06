@@ -1,10 +1,10 @@
-import { Component, OnDestroy } from "@angular/core";
+import { AfterViewInit, Component, OnDestroy, OnInit } from "@angular/core";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { FormUrlSaverDirective } from "./form-url-saver.directive";
 import { RouterTestingModule } from "@angular/router/testing";
 import { FormBuilder, FormsModule, ReactiveFormsModule } from "@angular/forms";
-import { ActivatedRoute, Router } from "@angular/router";
-import { BehaviorSubject, map, of, shareReplay, takeUntil, tap } from "rxjs";
+import { ActivatedRoute, Router, RouterModule, UrlSegment } from "@angular/router";
+import { BehaviorSubject, Observable, combineLatest, debounceTime, map, of, shareReplay, startWith, takeUntil, tap } from "rxjs";
 import * as _ from "lodash";
 import { TestScheduler } from "rxjs/testing";
 import { ArticleType } from "../enums/article-type";
@@ -23,7 +23,13 @@ class ActivatedRouteMock {
 
   public readonly snapshot = {
 
-    queryParams: {}
+    queryParams: {
+      id: '10',
+      authorId: '10',
+      title: 'title 10',
+      description: 'description 10',
+      type: 'Science',
+    }
 
   };
 }
@@ -75,7 +81,7 @@ class ActivatedRouteMock {
     </section>
   </div>`,
 })
-class TestComponent implements OnDestroy{
+class TestComponent implements OnDestroy, OnInit{
 
   public readonly defaultFormValue = {
     id: undefined,
@@ -122,16 +128,13 @@ class TestComponent implements OnDestroy{
 
   public readonly destroy$ = new BehaviorSubject<Boolean>(false);
 
-  public readonly valueChanges = this.form.valueChanges;
+  public readonly valueChanges = this.form.valueChanges.pipe(
+    startWith(this.defaultFormValue),
+  );
 
   public queryParamsFromRoute: Partial<Article> = {};
 
-  public readonly queryParamsObservable = this.route.queryParams.pipe(
-    shareReplay({
-      refCount: true,
-      bufferSize: 1,
-    }),
-  );
+  public readonly queryParamsObservable = this.route.queryParams;
 
   public readonly parsedParamsObservable = this.queryParamsObservable.pipe(
     map((params: ArticleInRoute) => this.parseArticleFromRoute(params)),
@@ -144,13 +147,17 @@ class TestComponent implements OnDestroy{
 
   public readonly queryParamsSub = this.parsedParamsObservable.pipe(
     takeUntil(this.destroy$),
-  ).subscribe();
+  );
 
   constructor(
     private readonly fb: FormBuilder,
     private readonly router: Router,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
   ){}
+
+  public ngOnInit() {
+    this.queryParamsSub.subscribe();
+  }
 
   public filterArticles() {
   //  this.articles.filter();
@@ -187,16 +194,18 @@ describe('FormUrlSaverDirective', () => {
         FormUrlSaverDirective
       ],
       imports: [
+        RouterModule,
         RouterTestingModule,
         FormsModule,
         ReactiveFormsModule,
-        RouterTestingModule
+        RouterTestingModule.withRoutes([]),
       ],
       providers:[
-        FormBuilder, {
+        FormBuilder,
+        {
           provide: ActivatedRoute,
           useClass: ActivatedRouteMock
-        }
+        },
       ],
     }).compileComponents();
 
@@ -210,6 +219,7 @@ describe('FormUrlSaverDirective', () => {
     });
 
     component = fixture.componentInstance;
+    component.ngOnInit();
     fixture.detectChanges();
   });
 
@@ -228,16 +238,41 @@ describe('FormUrlSaverDirective', () => {
 
   describe('ngxFormUrlSaver directive tests', () => {
     it('The first form value should be equal value from route', () => {
+
       const paramsSub = component.parsedParamsObservable.subscribe((params) => {
         const queryParamsFromRoute = params;
 
         const isEqual = _.isEqual(component.form.value, queryParamsFromRoute);
 
         expect(isEqual).toEqual(true);
+
       });
 
       paramsSub.unsubscribe();
     });
+
+    it('After changing form id value, valueChanges should emit', () => {
+
+      const id = 20;
+
+      const formParamsSub = component.valueChanges.subscribe((params) => {
+
+        if (!_.isEqual(params, component.defaultFormValue)) {
+
+          const isEqual = params.id === id;
+
+          expect(isEqual).toEqual(true);
+        }
+
+      });
+
+      component.form.patchValue({
+        id,
+      });
+
+      formParamsSub.unsubscribe();
+    });
+
 
     afterAll(() => {
       component.ngOnDestroy();
