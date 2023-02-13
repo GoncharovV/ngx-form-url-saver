@@ -2,9 +2,9 @@ import { AfterViewInit, Component, OnDestroy, OnInit } from "@angular/core";
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { FormUrlSaverDirective } from "./form-url-saver.directive";
 import { RouterTestingModule } from "@angular/router/testing";
-import { FormBuilder, FormsModule, ReactiveFormsModule } from "@angular/forms";
+import { FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterModule, UrlSegment } from "@angular/router";
-import { BehaviorSubject, Observable, combineLatest, debounceTime, map, of, shareReplay, startWith, takeUntil, tap } from "rxjs";
+import { BehaviorSubject, Observable, combineLatest, debounceTime, map, of, shareReplay, skip, startWith, takeUntil, tap } from "rxjs";
 import * as _ from "lodash";
 import { TestScheduler } from "rxjs/testing";
 import { ArticleType } from "../enums/article-type";
@@ -12,14 +12,19 @@ import { Article } from "../models/article";
 import { ArticleInRoute } from "../models/article-in-route";
 import { ArticleBuilder } from "../models/article-builder";
 
+const initQueryParams = {
+  id: '10',
+  authorId: '10',
+  title: 'title 10',
+  description: 'description 10',
+  type: 'Science',
+} as ArticleInRoute;
+
+const mockQueryParams = new BehaviorSubject<Partial<ArticleInRoute>>(initQueryParams);
+
 class ActivatedRouteMock {
-  public readonly queryParams = of({
-    id: '10',
-    authorId: '10',
-    title: 'title 10',
-    description: 'description 10',
-    type: 'Science',
-  });
+
+  public readonly queryParams = mockQueryParams.asObservable();
 
   public readonly snapshot = {
 
@@ -138,6 +143,10 @@ class TestComponent implements OnDestroy, OnInit{
 
   public readonly parsedParamsObservable = this.queryParamsObservable.pipe(
     map((params: ArticleInRoute) => this.parseArticleFromRoute(params)),
+    shareReplay({
+      bufferSize:1,
+      refCount: true,
+    }),
     tap((params) => {
       this.queryParamsFromRoute = params;
 
@@ -175,6 +184,18 @@ class TestComponent implements OnDestroy, OnInit{
     return  queryParamsFromRoute;
   }
 
+  public paramsToString(formParams: Article): Partial<ArticleInRoute> {
+    const paramsStr = {
+      id: formParams?.id ? String(formParams?.id) : undefined,
+      authorId: formParams?.authorId ? String(formParams?.authorId) : undefined,
+      type: formParams?.type ?? String(formParams?.type),
+      title: formParams?.title ?? String(formParams?.title),
+      description: formParams?.description ?? String(formParams?.description),
+    } as Partial<ArticleInRoute>;
+
+    return paramsStr;
+  }
+
   public ngOnDestroy = () => (this.destroy$.next(true));
 }
 
@@ -186,6 +207,7 @@ describe('FormUrlSaverDirective', () => {
   let route: ActivatedRoute;
   let directive: FormUrlSaverDirective;
   let testScheduler: TestScheduler;
+  const routerSpy = jasmine.createSpyObj('Router',['navigate']);
 
   beforeEach(async() => {
     await TestBed.configureTestingModule({
@@ -205,6 +227,10 @@ describe('FormUrlSaverDirective', () => {
         {
           provide: ActivatedRoute,
           useClass: ActivatedRouteMock
+        },
+        {
+          provide: Router,
+          useValue: routerSpy,
         },
       ],
     }).compileComponents();
@@ -255,14 +281,11 @@ describe('FormUrlSaverDirective', () => {
 
       const id = 20;
 
-      const formParamsSub = component.valueChanges.subscribe((params) => {
-
-        if (!_.isEqual(params, component.defaultFormValue)) {
+      const formParamsSub = component.valueChanges.pipe(skip(1)).subscribe((params) => {
 
           const isEqual = params.id === id;
 
           expect(isEqual).toEqual(true);
-        }
 
       });
 
@@ -270,9 +293,34 @@ describe('FormUrlSaverDirective', () => {
         id,
       });
 
+      const param = component.paramsToString(component.form.value as Article);
+
+      mockQueryParams.next(param);
+
       formParamsSub.unsubscribe();
     });
 
+    it('After changing form id value, value from route is changed', () => {
+
+      const id = 20;
+
+      const formParamsSub = component.parsedParamsObservable.pipe(skip(1)).subscribe((params) => {
+
+        const isEqual = params.id === +(mockQueryParams.value.id as string);
+
+        expect(isEqual).toEqual(true);
+      });
+
+      component.form.patchValue({
+        id,
+      });
+
+      const param = component.paramsToString(component.form.value as Article);
+
+      mockQueryParams.next(param);
+
+      formParamsSub.unsubscribe();
+    });
 
     afterAll(() => {
       component.ngOnDestroy();
