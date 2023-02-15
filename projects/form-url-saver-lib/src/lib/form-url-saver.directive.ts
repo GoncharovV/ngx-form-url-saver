@@ -52,6 +52,9 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     @Input()
     public queryKey = 'form';
 
+    @Input()
+    public strategy: 'united' | 'separated' = 'united';
+
     private filtersChangesSubscription?: Subscription;
 
     constructor(
@@ -72,7 +75,12 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     // #region Lifecycle methods
 
     public ngAfterViewInit(): void {
-        this.fillFormFromQuery();
+        if (this.strategy === 'united') {
+            this.fillFormFromUnitedQuery();
+        } else {
+            this.fillFormFromSeparatedQuery();
+        }
+
 
         this.subscribeToFormValueChanges();
     }
@@ -89,29 +97,44 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
 
     // #region Заполнение формы из query-параметров при инициализации
 
-    private fillFormFromQuery() {
-        const queryParams = this.activatedRoute.snapshot.queryParams;
-
-        const formValue = this.readFormValueFromQuery(queryParams);
-
-        this.form.patchValue({
-            ...formValue,
-        });
-    }
-
-    private readFormValueFromQuery(queryParams: Params) {
+    private fillFormFromUnitedQuery() {
         try {
-            const query = queryParams[this.queryKey] as string;
+            const query = this.activatedRoute.snapshot.queryParams[this.queryKey] as string;
 
             if (!query) {
-                return this.form.value;
+                return;
             }
 
             // TODO: Стратегия парсинга объекта
-            return JSON.parse(query);
-        } catch {
-            return this.form.value;
+            const formValue = JSON.parse(query);
+
+            this.form.patchValue({
+                ...formValue,
+            });
+        } catch { }
+    }
+
+    private fillFormFromSeparatedQuery() {
+        try {
+            const queryParams = this.activatedRoute.snapshot.queryParams;
+
+            const queryObject = this.readAllSeparatedQuery(queryParams)
+
+            this.form.patchValue({
+                ...queryObject,
+            });
+        } catch { }
+    }
+
+    private readAllSeparatedQuery(queryParams: Params) {
+        const queryObject: Record<string, unknown> = {};
+
+        for (const key of Object.keys(this.form.value)) {
+            // TODO: Стратегия парсинга объекта
+            queryObject[key] = JSON.parse(queryParams[key]);
         }
+
+        return queryObject;
     }
 
     // #endregion
@@ -134,11 +157,21 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
 
     private convertFormValueToQueryObject(formValue: Record<string, unknown>) {
         // TODO: Стратегия сериализации объекта
-        const serializedObject = JSON.stringify(formValue);
+        if (this.strategy === 'united') {
+            const serializedObject = JSON.stringify(formValue);
 
-        return {
-            [this.queryKey]: serializedObject,
-        };
+            return {
+                [this.queryKey]: serializedObject,
+            };
+        } else {
+            const queryObject: Record<string, unknown> = {};
+
+            for (const key of Object.keys(formValue)) {
+                queryObject[key] = JSON.stringify(formValue[key]);
+            }
+
+            return queryObject;
+        }
     }
 
     // #endregion
@@ -146,13 +179,27 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     private clearFormQuery() {
         setTimeout(() => {
             void this.router.navigate([], {
-                queryParams: {
-                    [this.queryKey]: null,
-                },
+                queryParams: this.createClearObject(),
                 queryParamsHandling: 'merge',
                 replaceUrl: true,
             });
         }, 0);
+    }
+
+    private createClearObject() {
+        if (this.strategy === 'united') {
+            return {
+                [this.queryKey]: null,
+            };
+        }
+
+        const filtersObject: Record<string, null> = {};
+
+        for (const key of Object.keys(this.form.value)) {
+            filtersObject[key] = null;
+        }
+
+        return filtersObject;
     }
 
 }
