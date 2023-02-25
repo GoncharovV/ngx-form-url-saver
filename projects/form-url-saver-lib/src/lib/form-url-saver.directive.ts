@@ -1,3 +1,6 @@
+import { Separated } from './strategies/separated-form.strategy';
+import { United } from './strategies/united-form.strategy';
+import { QueryGenerationStrategy } from './strategies/strategy';
 import { ActivatedRoute, Params, Router } from '@angular/router';
 import { AfterViewInit, Directive, forwardRef, Inject, Input, OnDestroy, Optional, Self } from '@angular/core';
 import {
@@ -12,6 +15,7 @@ import {
     ValidatorFn,
 } from '@angular/forms';
 import { debounceTime, map, startWith, Subscription } from 'rxjs';
+import { FormHandlingStrategy, FormHandlingStrategyToken } from '../token';
 
 const formDirectiveProvider = {
     provide: ControlContainer,
@@ -28,8 +32,6 @@ const formDirectiveProvider = {
  * TODO: Прокомментировать принцип работы после изменения логики
  * 
  * @property {number} `debounceTime` - Время задержки.
- *
- * @property {DateTime} `useDateTime` - использовать дату. По умолчанию `false`.
  *
  * @property {UntypedFormGroup} `form` - ссылка на форму.
  *
@@ -57,9 +59,14 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
 
     private filtersChangesSubscription?: Subscription;
 
+    private queryStrategy!: QueryGenerationStrategy;
+
     constructor(
         private readonly router: Router,
         private readonly activatedRoute: ActivatedRoute,
+
+        @Inject(FormHandlingStrategyToken)
+        private readonly formHandlingStrategy: FormHandlingStrategy,
 
         /**
          * Default Angular FormGroupDirective dependencies
@@ -75,11 +82,18 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     // #region Lifecycle methods
 
     public ngAfterViewInit(): void {
-        if (this.strategy === 'united') {
-            this.fillFormFromUnitedQuery();
-        } else {
-            this.fillFormFromSeparatedQuery();
-        }
+        this.queryStrategy = this.createQueryHandlingStrategy();
+
+        // this.activatedRoute.queryParams.subscribe(console.log)
+        console.log('params from directive', this.activatedRoute.snapshot.queryParams);
+
+
+        const readed = this.queryStrategy.inferFormValueFromQuery(this.activatedRoute.snapshot.queryParams, this.form.value)
+
+        console.log(readed);
+
+
+        this.form.patchValue(readed);
 
 
         this.subscribeToFormValueChanges();
@@ -95,49 +109,13 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
 
     // #endregion
 
-    // #region Заполнение формы из query-параметров при инициализации
-
-    private fillFormFromUnitedQuery() {
-        try {
-            const query = this.activatedRoute.snapshot.queryParams[this.queryKey] as string;
-
-            if (!query) {
-                return;
-            }
-
-            // TODO: Стратегия парсинга объекта
-            const formValue = JSON.parse(query);
-
-            this.form.patchValue({
-                ...formValue,
-            });
-        } catch { }
-    }
-
-    private fillFormFromSeparatedQuery() {
-        try {
-            const queryParams = this.activatedRoute.snapshot.queryParams;
-
-            const queryObject = this.readAllSeparatedQuery(queryParams)
-
-            this.form.patchValue({
-                ...queryObject,
-            });
-        } catch { }
-    }
-
-    private readAllSeparatedQuery(queryParams: Params) {
-        const queryObject: Record<string, unknown> = {};
-
-        for (const key of Object.keys(this.form.value)) {
-            // TODO: Стратегия парсинга объекта
-            queryObject[key] = JSON.parse(queryParams[key]);
+    public createQueryHandlingStrategy() {
+        if (this.strategy = 'united') {
+            return new United(this.formHandlingStrategy, this.queryKey);
+        } else {
+            return new Separated(this.formHandlingStrategy);
         }
-
-        return queryObject;
     }
-
-    // #endregion
 
     // #region Запись query-параметров при изменение формы
 
@@ -148,30 +126,11 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
             map((value, index) => [value, index] as const),
         ).subscribe(([value, index]) => {
             void this.router.navigate([], {
-                queryParams: this.convertFormValueToQueryObject(value),
+                queryParams: this.queryStrategy.convertFormValueToQueryObject(value),
                 queryParamsHandling: 'merge',
                 replaceUrl: index === 0,
             });
         });
-    }
-
-    private convertFormValueToQueryObject(formValue: Record<string, unknown>) {
-        // TODO: Стратегия сериализации объекта
-        if (this.strategy === 'united') {
-            const serializedObject = JSON.stringify(formValue);
-
-            return {
-                [this.queryKey]: serializedObject,
-            };
-        } else {
-            const queryObject: Record<string, unknown> = {};
-
-            for (const key of Object.keys(formValue)) {
-                queryObject[key] = JSON.stringify(formValue[key]);
-            }
-
-            return queryObject;
-        }
     }
 
     // #endregion
@@ -179,27 +138,11 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     private clearFormQuery() {
         setTimeout(() => {
             void this.router.navigate([], {
-                queryParams: this.createClearObject(),
+                queryParams: this.queryStrategy.createClearingObject(this.form.value),
                 queryParamsHandling: 'merge',
                 replaceUrl: true,
             });
         }, 0);
-    }
-
-    private createClearObject() {
-        if (this.strategy === 'united') {
-            return {
-                [this.queryKey]: null,
-            };
-        }
-
-        const filtersObject: Record<string, null> = {};
-
-        for (const key of Object.keys(this.form.value)) {
-            filtersObject[key] = null;
-        }
-
-        return filtersObject;
     }
 
 }
