@@ -1,7 +1,7 @@
 import { Separated } from './strategies/separated-form.strategy';
 import { United } from './strategies/united-form.strategy';
 import { QueryGenerationStrategy } from './strategies/strategy';
-import { ActivatedRoute, Params, Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AfterViewInit, Directive, forwardRef, Inject, Input, OnDestroy, Optional, Self } from '@angular/core';
 import {
     AsyncValidator,
@@ -30,7 +30,7 @@ const formDirectiveProvider = {
  * Позволяет установить задержку (_debounce_) обновления query.
  *
  * TODO: Прокомментировать принцип работы после изменения логики
- * 
+ *
  * @property {number} `debounceTime` - Время задержки.
  *
  * @property {UntypedFormGroup} `form` - ссылка на форму.
@@ -84,19 +84,9 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     public ngAfterViewInit(): void {
         this.queryStrategy = this.createQueryHandlingStrategy();
 
-        // this.activatedRoute.queryParams.subscribe(console.log)
-        console.log('params from directive', this.activatedRoute.snapshot.queryParams);
-
-
-        const readed = this.queryStrategy.inferFormValueFromQuery(this.activatedRoute.snapshot.queryParams, this.form.value)
-
-        console.log(readed);
-
-
-        this.form.patchValue(readed);
-
-
-        this.subscribeToFormValueChanges();
+        setTimeout(() => {
+            this.fillFormFromQuery();
+        })
     }
 
     public override ngOnDestroy(): void {
@@ -109,15 +99,21 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
 
     // #endregion
 
+    private fillFormFromQuery() {
+        this.form.patchValue(
+            this.queryStrategy.inferFormValueFromQuery(this.activatedRoute.snapshot.queryParams, this.form.value)
+        );
+
+        this.subscribeToFormValueChanges();
+    }
+
     public createQueryHandlingStrategy() {
-        if (this.strategy = 'united') {
+        if (this.strategy === 'united') {
             return new United(this.formHandlingStrategy, this.queryKey);
         } else {
             return new Separated(this.formHandlingStrategy);
         }
     }
-
-    // #region Запись query-параметров при изменение формы
 
     private subscribeToFormValueChanges() {
         this.filtersChangesSubscription = this.form.valueChanges.pipe(
@@ -132,8 +128,6 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
             });
         });
     }
-
-    // #endregion
 
     private clearFormQuery() {
         setTimeout(() => {

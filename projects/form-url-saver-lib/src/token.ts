@@ -7,15 +7,15 @@ export interface FormHandlingStrategy {
 
 class DefaultFormHandlingStrategy {
 
-    constructor() {
-        JSON.stringify
-    }
-
     public stringify(value: unknown) {
         return JSON.stringify(value);
     }
 
-    public parse(value: string) {
+    public parse(value?: string) {
+        if (!value) {
+            return undefined;
+        }
+
         return JSON.parse(value);
     }
 }
