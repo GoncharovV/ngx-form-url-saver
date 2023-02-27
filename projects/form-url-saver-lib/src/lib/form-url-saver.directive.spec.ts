@@ -86,7 +86,7 @@ class ActivatedRouteMock {
     </section>
   </div>`,
 })
-class TestComponent implements OnDestroy, OnInit{
+class TestComponent implements OnDestroy, OnInit {
 
   public readonly defaultFormValue = {
     id: undefined,
@@ -94,7 +94,7 @@ class TestComponent implements OnDestroy, OnInit{
     title: undefined,
     description: undefined,
     type: undefined,
-  } as Article;
+  };
 
   public readonly form = this.fb.group<Article>(this.defaultFormValue);
 
@@ -129,7 +129,7 @@ class TestComponent implements OnDestroy, OnInit{
       .withTitle('title 5')
       .withDescription('description 5')
       .withType(ArticleType.Science).build(),
-  ] as Article [];
+  ] as Article[];
 
   public readonly destroy$ = new BehaviorSubject<Boolean>(false);
 
@@ -144,7 +144,7 @@ class TestComponent implements OnDestroy, OnInit{
   public readonly parsedParamsObservable = this.queryParamsObservable.pipe(
     map((params: ArticleInRoute) => this.parseArticleFromRoute(params)),
     shareReplay({
-      bufferSize:1,
+      bufferSize: 1,
       refCount: true,
     }),
     tap((params) => {
@@ -162,26 +162,26 @@ class TestComponent implements OnDestroy, OnInit{
     private readonly fb: FormBuilder,
     private readonly router: Router,
     private readonly route: ActivatedRoute,
-  ){}
+  ) { }
 
   public ngOnInit() {
     this.queryParamsSub.subscribe();
   }
 
   public filterArticles() {
-  //  this.articles.filter();
+    //  this.articles.filter();
   }
 
   public parseArticleFromRoute(params: ArticleInRoute) {
     const queryParamsFromRoute = {
-      id: params.id ? parseInt(params.id, 10): undefined,
-      authorId: params.authorId ? parseInt(String(params.authorId), 10): undefined,
-      title: params.title? params.title : undefined,
+      id: params.id ? parseInt(params.id, 10) : undefined,
+      authorId: params.authorId ? parseInt(String(params.authorId), 10) : undefined,
+      title: params.title ? params.title : undefined,
       description: params.description ? params.description : undefined,
       type: params.type ? params.type as ArticleType : undefined,
     };
 
-    return  queryParamsFromRoute;
+    return queryParamsFromRoute;
   }
 
   public paramsToString(formParams: Article): Partial<ArticleInRoute> {
@@ -207,9 +207,9 @@ describe('FormUrlSaverDirective', () => {
   let route: ActivatedRoute;
   let directive: FormUrlSaverDirective;
   let testScheduler: TestScheduler;
-  const routerSpy = jasmine.createSpyObj('Router',['navigate']);
+  const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
 
-  beforeEach(async() => {
+  beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [
         TestComponent,
@@ -222,7 +222,7 @@ describe('FormUrlSaverDirective', () => {
         ReactiveFormsModule,
         RouterTestingModule.withRoutes([]),
       ],
-      providers:[
+      providers: [
         FormBuilder,
         {
           provide: ActivatedRoute,
@@ -283,9 +283,9 @@ describe('FormUrlSaverDirective', () => {
 
       const formParamsSub = component.valueChanges.pipe(skip(1)).subscribe((params) => {
 
-          const isEqual = params.id === id;
+        const isEqual = params.id === id;
 
-          expect(isEqual).toEqual(true);
+        expect(isEqual).toEqual(true);
 
       });
 

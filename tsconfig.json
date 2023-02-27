@@ -9,11 +9,9 @@
     "noImplicitOverride": true,
     "paths": {
       "form-url-saver-lib": [
-        "dist/form-url-saver-lib",
-        "dist/form-url-saver-lib/lib",
+        "dist/form-url-saver-lib"
       ]
     },
-    "emitDecoratorMetadata": true,
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
@@ -23,10 +21,11 @@
     "experimentalDecorators": true,
     "moduleResolution": "node",
     "importHelpers": true,
-    "target": "es2020",
-    "module": "es2020",
+    "target": "ES2022",
+    "module": "ES2022",
+    "useDefineForClassFields": false,
     "lib": [
-      "es2020",
+      "ES2022",
       "dom"
     ]
   },

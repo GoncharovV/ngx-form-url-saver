@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-use-before-define */
-/* eslint-disable id-denylist */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { ActivatedRoute, Params, Router } from '@angular/router';
+import { Separated } from './strategies/separated-form.strategy';
+import { United } from './strategies/united-form.strategy';
+import { QueryGenerationStrategy } from './strategies/strategy';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AfterViewInit, Directive, forwardRef, Inject, Input, OnDestroy, Optional, Self } from '@angular/core';
 import {
     AsyncValidator,
@@ -15,9 +14,8 @@ import {
     Validator,
     ValidatorFn,
 } from '@angular/forms';
-import { DateTime } from 'luxon';
 import { debounceTime, map, startWith, Subscription } from 'rxjs';
-import { isDate } from 'lodash';
+import { FormHandlingStrategy, FormHandlingStrategyToken } from '../token';
 
 const formDirectiveProvider = {
     provide: ControlContainer,
@@ -31,12 +29,9 @@ const formDirectiveProvider = {
  *
  * Позволяет установить задержку (_debounce_) обновления query.
  *
- * Если поле формы является объектом, его значение будет записано в query
- * в формате строки (_JSON.stringify_), по ключу complex-`Имя поля`
+ * TODO: Прокомментировать принцип работы после изменения логики
  *
  * @property {number} `debounceTime` - Время задержки.
- *
- * @property {DateTime} `useDateTime` - использовать дату. По умолчанию `false`.
  *
  * @property {UntypedFormGroup} `form` - ссылка на форму.
  *
@@ -48,8 +43,6 @@ const formDirectiveProvider = {
 })
 export class FormUrlSaverDirective extends FormGroupDirective implements AfterViewInit, OnDestroy {
 
-    private readonly COMPLEX_OBJECT_PREFIX = 'complex-';
-
     private readonly BASE_DEBOUNCE_TIME = 500;
 
     @Input('ngxFormUrlSaver')
@@ -59,13 +52,21 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     public debounceTime = this.BASE_DEBOUNCE_TIME;
 
     @Input()
-    public useDateTime = false;
+    public queryKey = 'form';
+
+    @Input()
+    public strategy: 'united' | 'separated' = 'united';
 
     private filtersChangesSubscription?: Subscription;
+
+    private queryStrategy!: QueryGenerationStrategy;
 
     constructor(
         private readonly router: Router,
         private readonly activatedRoute: ActivatedRoute,
+
+        @Inject(FormHandlingStrategyToken)
+        private readonly formHandlingStrategy: FormHandlingStrategy,
 
         /**
          * Default Angular FormGroupDirective dependencies
@@ -81,9 +82,11 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     // #region Lifecycle methods
 
     public ngAfterViewInit(): void {
-        this.fillFormFromQuery();
+        this.queryStrategy = this.createQueryHandlingStrategy();
 
-        this.subscribeToFormValueChanges();
+        setTimeout(() => {
+            this.fillFormFromQuery();
+        })
     }
 
     public override ngOnDestroy(): void {
@@ -91,83 +94,26 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
 
         this.filtersChangesSubscription?.unsubscribe();
 
-        this.clearFiltersQuery();
+        this.clearFormQuery();
     }
 
     // #endregion
-
-    // #region Заполнение формы из query-параметров при инициализации
 
     private fillFormFromQuery() {
-        const queryParams = this.activatedRoute.snapshot.queryParams;
+        this.form.patchValue(
+            this.queryStrategy.inferFormValueFromQuery(this.activatedRoute.snapshot.queryParams, this.form.value)
+        );
 
-        const simpleQuery = this.readAllSimpleQuery(queryParams);
-
-        const complexQuery = this.readAllComplexQuery(queryParams);
-
-        this.form.patchValue({
-            ...simpleQuery,
-            ...complexQuery,
-        });
+        this.subscribeToFormValueChanges();
     }
 
-    private readAllSimpleQuery(queryParams: Params) {
-        const simpleQueryObject: Record<string, unknown> = {};
-
-        for (const key of Object.keys(this.form.value)) {
-            const value: unknown = this.getNewValueByQueryKey(queryParams, key);
-            if (this.useDateTime && typeof value === 'string') {
-                const dateTimeValue = DateTime.fromISO(value);
-                simpleQueryObject[key] = dateTimeValue.isValid ? dateTimeValue : value;
-            } else {
-                simpleQueryObject[key] = value;
-            }
+    public createQueryHandlingStrategy() {
+        if (this.strategy === 'united') {
+            return new United(this.formHandlingStrategy, this.queryKey);
+        } else {
+            return new Separated(this.formHandlingStrategy);
         }
-
-        return simpleQueryObject;
     }
-
-    public getNewValueByQueryKey(queryParams: Params, key: string) {
-        const queryParamValue: unknown = queryParams[key];
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        const currentValue: unknown = this.form.value[key];
-
-        if (!queryParamValue) {
-            return currentValue;
-        }
-
-        const queryValueMustBeConvertedToArray = Array.isArray(currentValue) && !Array.isArray(queryParamValue);
-
-        return queryValueMustBeConvertedToArray
-            ? [queryParamValue]
-            : queryParamValue;
-    }
-
-    private readAllComplexQuery(queryParams: Params) {
-        const complexQueryKeys = Object.keys(queryParams)
-            .filter(paramName => this.checkIfKeyIsComplex(paramName));
-
-        if (!complexQueryKeys.length) {
-            return {};
-        }
-
-        const newFormValue: Record<string, unknown> = {};
-
-        for (const complexKey of complexQueryKeys) {
-            const originKey = this.getOriginKey(complexKey);
-
-            try {
-                newFormValue[originKey] = JSON.parse(queryParams[complexKey]);
-            } catch (error: unknown) {}
-        }
-
-        return newFormValue;
-    }
-
-    // #endregion
-
-    // #region Запись query-параметров при изменение формы
 
     private subscribeToFormValueChanges() {
         this.filtersChangesSubscription = this.form.valueChanges.pipe(
@@ -176,82 +122,17 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
             map((value, index) => [value, index] as const),
         ).subscribe(([value, index]) => {
             void this.router.navigate([], {
-                queryParams: this.convertFormValueToQueryObject(value),
+                queryParams: this.queryStrategy.convertFormValueToQueryObject(value),
                 queryParamsHandling: 'merge',
                 replaceUrl: index === 0,
             });
         });
     }
 
-    private convertFormValueToQueryObject(formValue: Record<string, unknown>) {
-        const queryObject: Record<string, unknown> = {};
-
-        for (const key of Object.keys(formValue)) {
-            if (this.isObject(formValue[key]) && !DateTime.isDateTime(formValue[key])) {
-                queryObject[this.createComplexKey(key)] = JSON.stringify(formValue[key]);
-            } else {
-                queryObject[key] = this.prepareValue(formValue[key]);
-            }
-        }
-
-        return queryObject;
-    }
-
-    private prepareValue(value: unknown) {
-        if (isDate(value) || DateTime.isDateTime(value)) {
-            return value.toJSON();
-        }
-
-        return value;
-    }
-
-    // #endregion
-
-    // #region Работа со сложными ключами для вложенных объектов
-
-    private createComplexKey(objectKey: string) {
-        return this.COMPLEX_OBJECT_PREFIX + objectKey;
-    }
-
-    private getOriginKey(complexKey: string) {
-        return complexKey.replace(this.COMPLEX_OBJECT_PREFIX, '');
-    }
-
-    private checkIfKeyIsComplex(key: string) {
-        return key.includes(this.COMPLEX_OBJECT_PREFIX);
-    }
-
-    // #endregion
-
-    /**
-     * Проверяет, является ли переданное значение объектом.
-     * Вернет `false` для `даты` или `массива`.
-     *
-     * `Object.prototype.toString.call(new Date()) = [object Date]`
-     * `Object.prototype.toString.call(new Array()) = [object Array]`
-     */
-    private isObject(value: unknown): value is object {
-        return Object.prototype.toString.call(value) === '[object Object]';
-    }
-
-
-    private clearFiltersQuery() {
-        const filtersObject: Record<string, null> = {};
-
-        for (const key of Object.keys(this.form.value)) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            if (this.isObject(this.form.value[key])) {
-                filtersObject[this.createComplexKey(key)] = null;
-            } else {
-                filtersObject[key] = null;
-            }
-        }
-
+    private clearFormQuery() {
         setTimeout(() => {
             void this.router.navigate([], {
-                queryParams: {
-                    ...filtersObject,
-                },
+                queryParams: this.queryStrategy.createClearingObject(this.form.value),
                 queryParamsHandling: 'merge',
                 replaceUrl: true,
             });
