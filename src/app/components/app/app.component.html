@@ -1,0 +1,11 @@
+<mat-toolbar color="primary">
+    <a mat-button [routerLink]="['./']">Home</a>
+    <!-- <a mat-button>page2</a> -->
+</mat-toolbar>
+
+<app-display-navigation></app-display-navigation>
+
+<form [ngxFormUrlSaver]="form" strategy="separated">
+  <input type="text" formControlName="name">
+  <input type="number" formControlName="age">
+</form>

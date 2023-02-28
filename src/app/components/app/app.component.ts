@@ -1,11 +1,13 @@
 import { ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup } from '@angular/forms';
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { NavigationHistoryService } from 'src/app/services/navigation-history.service';
 
 @Component({
     selector: 'app-root',
     templateUrl: './app.component.html',
-    styleUrls: ['./app.component.scss']
+    styleUrls: ['./app.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
     public readonly form = new FormGroup({
@@ -14,8 +16,7 @@ export class AppComponent {
     });
 
     constructor(
-        private activatedRoute: ActivatedRoute
-    ) {
-    }
+        private readonly activatedRoute: ActivatedRoute,
+    ) {}
 
 }
