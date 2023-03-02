@@ -1,10 +1,10 @@
+import { BehaviorSubject, filter, Observable, shareReplay } from 'rxjs';
 import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, filter, shareReplay } from 'rxjs';
 import { isNavigationEnd } from '../utils/is-navigation-end';
+import { Router } from '@angular/router';
 
 @Injectable({
-  providedIn: 'root'
+    providedIn: 'root',
 })
 export class NavigationHistoryService {
 
@@ -16,21 +16,22 @@ export class NavigationHistoryService {
             bufferSize: 1,
         }));
 
-    public get currentUrl() : string | undefined {
+    public get currentUrl(): string | undefined {
         return this.currentUrlBehaviorSubject.value;
     }
 
-    public set currentUrl (url: string | undefined) {
+    public set currentUrl(url: string | undefined) {
         this.currentUrlBehaviorSubject.next(url);
     }
 
     constructor(private readonly router: Router) {
         this.router.events
-        .pipe(
-            filter(isNavigationEnd)
-        )
-        .subscribe((e) => {
-            this.currentUrl = e.url;
-        })
+            .pipe(
+                filter(isNavigationEnd),
+            )
+            .subscribe(event => {
+                this.currentUrl = event.url;
+            });
     }
+
 }

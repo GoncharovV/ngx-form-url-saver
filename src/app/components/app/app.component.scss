@@ -1,0 +1,11 @@
+:host {
+    .main {
+        display: flex;
+        flex-flow: column nowrap;
+        gap: var(--indent-large);
+        padding: var(--indent-large);
+        align-items: center;
+        max-width: 90%;
+        margin: auto;
+    }
+}

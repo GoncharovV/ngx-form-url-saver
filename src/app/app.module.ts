@@ -7,12 +7,14 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { FormUrlSaverLibModule } from 'projects/form-url-saver-lib/src/public-api';
 import { MaterialProxyModule } from './shared/material-proxy/material-proxy.module';
 import { NgModule } from '@angular/core';
+import { HomePageComponent } from './components/home-page/home-page.component';
 
 
 @NgModule({
     declarations: [
         AppComponent,
         DisplayNavigationComponent,
+        HomePageComponent,
     ],
     imports: [
         BrowserModule,
