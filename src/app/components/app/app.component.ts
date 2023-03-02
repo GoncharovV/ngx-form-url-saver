@@ -1,7 +1,6 @@
 import { ActivatedRoute } from '@angular/router';
-import { FormControl, FormGroup } from '@angular/forms';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { NavigationHistoryService } from 'src/app/services/navigation-history.service';
+import { FormControl, FormGroup } from '@angular/forms';
 
 @Component({
     selector: 'app-root',
@@ -10,6 +9,8 @@ import { NavigationHistoryService } from 'src/app/services/navigation-history.se
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
+
+    // eslint-disable-next-line id-denylist
     public readonly form = new FormGroup({
         name: new FormControl(''),
         age: new FormControl(0),
