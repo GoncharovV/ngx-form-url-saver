@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 
-import { FormUrlService } from './form-url.service';
+import { FormUrlSettingsService } from './form-url-settings.service';
 
-describe('FormUrlService', () => {
+describe('FormUrlSettingsService', () => {
 //   let service: FormUrlService;
 
 //   beforeEach(() => {

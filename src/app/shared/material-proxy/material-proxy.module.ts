@@ -4,6 +4,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { NgModule } from '@angular/core';
 
@@ -15,6 +17,8 @@ const MATERIAL_IMPORTS = [
     MatFormFieldModule,
     MatGridListModule,
     MatInputModule,
+    MatSidenavModule,
+    MatSelectModule,
 ];
 
 @NgModule({

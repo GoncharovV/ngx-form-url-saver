@@ -1,36 +1,42 @@
 import { BehaviorSubject, filter, Observable, shareReplay } from 'rxjs';
+import { HttpUrlEncodingCodec } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { isNavigationEnd } from '../utils/is-navigation-end';
 import { Router } from '@angular/router';
+import { shareReplayOneRefBuff } from '../utils/share-replay-one-ref-buffer';
 
 @Injectable({
     providedIn: 'root',
 })
 export class NavigationHistoryService {
 
-    private readonly currentUrlBehaviorSubject = new BehaviorSubject<string | undefined>(undefined);
+    private readonly codec = new HttpUrlEncodingCodec();
 
-    public readonly currentUrlObservable = (this.currentUrlBehaviorSubject as Observable<string | undefined>)
-        .pipe(shareReplay({
-            refCount: true,
-            bufferSize: 1,
-        }));
+    private readonly currentUrlBehaviorSubject = new BehaviorSubject<string>('');
 
-    public get currentUrl(): string | undefined {
+    public readonly currentUrlObservable = (this.currentUrlBehaviorSubject as Observable<string>)
+        .pipe(
+            shareReplayOneRefBuff(),
+        );
+
+    public get currentUrl(): string {
         return this.currentUrlBehaviorSubject.value;
     }
 
-    public set currentUrl(url: string | undefined) {
+    public set currentUrl(url: string) {
         this.currentUrlBehaviorSubject.next(url);
     }
 
     constructor(private readonly router: Router) {
+
         this.router.events
             .pipe(
                 filter(isNavigationEnd),
             )
             .subscribe(event => {
-                this.currentUrl = event.url;
+                const decodedUrl = this.codec.decodeValue(event.url);
+
+                this.currentUrl = decodedUrl;
             });
     }
 

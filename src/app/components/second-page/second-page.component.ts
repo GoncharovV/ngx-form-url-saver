@@ -19,6 +19,7 @@ export class SecondPageComponent {
         phone: new FormControl(''),
         country: new FormControl(''),
         city: new FormControl(''),
+        birth: new FormControl(null),
     });
 
 }
