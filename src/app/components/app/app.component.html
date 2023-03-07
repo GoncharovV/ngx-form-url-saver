@@ -1,6 +1,6 @@
 <mat-toolbar color="primary">
     <a mat-button [routerLink]="['./home']" [routerLinkActive]="'active'">Register</a>
-    <a mat-button [routerLink]="['./second']" [routerLinkActive]="'active'">Second</a>
+    <a mat-button [routerLink]="['./second']" [routerLinkActive]="'active'">Payment</a>
 </mat-toolbar>
 
 <mat-drawer-container autosize>
@@ -11,7 +11,7 @@
         <div>
             <app-display-navigation></app-display-navigation>
         </div>
-        <div>
+        <div class="pages">
             <router-outlet></router-outlet>
         </div>
     </main>

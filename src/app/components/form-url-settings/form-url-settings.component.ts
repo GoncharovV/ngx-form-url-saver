@@ -41,7 +41,7 @@ export class FormUrlSettingsComponent implements OnDestroy {
                 }
 
                 if (params.debounceTime) {
-                    this.formUrlSettings.updateTime = params.debounceTime;
+                    this.formUrlSettings.updateTime = parseInt(`${params.debounceTime}`, 10);
                 }
 
                 // eslint-disable-next-line @typescript-eslint/no-floating-promises

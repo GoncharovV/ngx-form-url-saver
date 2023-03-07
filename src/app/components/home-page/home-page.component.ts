@@ -1,3 +1,4 @@
+import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
@@ -18,7 +19,7 @@ export class HomePageComponent implements OnDestroy {
     public readonly defaultParams = {
         firstName: new FormControl(''),
         secondName: new FormControl(''),
-        age: new FormControl(0),
+        age: new FormControl(null),
         email: new FormControl(''),
         phone: new FormControl(null),
         country: new FormControl(''),
@@ -26,52 +27,27 @@ export class HomePageComponent implements OnDestroy {
         birth: new FormControl(null),
     };
 
-    public registerFormUnited = new FormGroup(this.defaultParams);
-
-    public registerFormSeparated = new FormGroup(this.defaultParams);
+    public registerForm = new FormGroup(this.defaultParams);
 
     public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable
         .pipe(
-            tap(() => {
-                this.reset();
-            }),
             shareReplayOneRefBuff(),
             takeUntil(this.destroySubject),
         );
 
-    public strategy = this.formUrlSettings.strategy;
-
-    public queryKey = this.formUrlSettings.queryKey;
-
-    public debounceTime = this.formUrlSettings.updateTime;
-
-    constructor(private readonly formUrlSettings: FormUrlSettingsService) {}
+    constructor(
+        private readonly formUrlSettings: FormUrlSettingsService,
+        private readonly router: Router,
+        private readonly route: ActivatedRoute,
+    ) {}
 
     public ngOnDestroy(): void {
         this.destroySubject.next(true);
     }
 
-    public reset(): void {
-        this.registerFormUnited.patchValue({
-            firstName: '',
-            secondName: '',
-            age: 0,
-            email: '',
-            phone: null,
-            country: '',
-            city: '',
-            birth: null,
-        });
-        this.registerFormSeparated.reset({
-            firstName: '',
-            secondName: '',
-            age: 0,
-            email: '',
-            phone: null,
-            country: '',
-            city: '',
-            birth: null,
-        });
+    public async reset() {
+        this.registerForm.reset();
+        await this.router.navigate([], { relativeTo: this.route });
     }
 
 }
