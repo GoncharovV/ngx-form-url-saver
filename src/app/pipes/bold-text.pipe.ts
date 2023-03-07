@@ -30,11 +30,13 @@ export class BoldTextPipe implements PipeTransform {
 
         if (matches) {
             matches.forEach(foundString => {
-                const startIdx = source.indexOf(foundString);
-                const leftSideStr = source.slice(0, startIdx);
-                const rightSideStr = source.slice(startIdx);
 
-                const rightSideStrReplaced = rightSideStr.replace(this.regex, `<b>${foundString}</b>`);
+                const startIdx = outString.indexOf(foundString);
+                const leftSideStr = outString.slice(0, startIdx);
+                const rightSideStr = outString.slice(startIdx);
+                const newRegex = new RegExp(this.pattern, 'mi');
+
+                const rightSideStrReplaced = rightSideStr.replace(newRegex, `<b>${foundString}</b>`);
 
 
                 outString = leftSideStr + rightSideStrReplaced;
