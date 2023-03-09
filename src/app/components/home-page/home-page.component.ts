@@ -2,7 +2,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
-import { Subject } from 'rxjs';
+import { Subject, tap } from 'rxjs';
 
 @Component({
     selector: 'app-home-page',
@@ -27,7 +27,11 @@ export class HomePageComponent implements OnDestroy {
 
     public registerForm = new FormGroup(this.defaultParams);
 
-    public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable;
+    public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable.pipe(
+        tap(() => {
+            this.router.navigate([]);
+        }),
+    );
 
     constructor(
         private readonly formUrlSettings: FormUrlSettingsService,

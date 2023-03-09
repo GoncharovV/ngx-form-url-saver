@@ -2,7 +2,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
-import { Subject } from 'rxjs';
+import { Subject, tap } from 'rxjs';
 
 interface PaymentForm {
     payments: FormArray<FormGroup<CardInfoForm>>;
@@ -38,7 +38,11 @@ export class SecondPageComponent implements OnDestroy {
         return this.paymentForm.get('payments') as FormArray<FormGroup<CardInfoForm>>;
     }
 
-    public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable;
+    public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable.pipe(
+        tap(() => {
+            this.router.navigate([]);
+        }),
+    );
 
     constructor(
         private readonly formUrlSettings: FormUrlSettingsService,
