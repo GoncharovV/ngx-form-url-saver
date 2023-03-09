@@ -1,9 +1,12 @@
-import { ActivatedRoute, Router } from '@angular/router';
-import { ChangeDetectionStrategy, Component, OnDestroy, TrackByFunction } from '@angular/core';
-import { FormBuilder } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, TrackByFunction } from '@angular/core';
+import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { FormUrlParams } from 'src/app/models/form-url-params';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
 import { Subject, takeUntil } from 'rxjs';
+
+type FormUrlSettings<T> = {
+    [P in keyof T]: T[P] extends 'object' ? FormGroup<FormUrlSettings<T>> : FormControl<T[P]>;
+};
 
 @Component({
     selector: 'app-form-url-settings',
@@ -11,7 +14,7 @@ import { Subject, takeUntil } from 'rxjs';
     styleUrls: ['./form-url-settings.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FormUrlSettingsComponent implements OnDestroy {
+export class FormUrlSettingsComponent implements OnInit, OnDestroy {
 
     private readonly destroySubject = new Subject<boolean>();
 
@@ -19,42 +22,55 @@ export class FormUrlSettingsComponent implements OnDestroy {
 
     public trackingStrategy: TrackByFunction<string> = idx => idx;
 
-    public defaultParams: FormUrlParams = {
-        debounceTime: this.formUrlSettings.defaultUpdateTime,
-        queryKey: this.formUrlSettings.defaultQueryKey,
-        strategy: this.formUrlSettings.defaultStrategy,
-    };
+    public formParams = this.fb.group<FormUrlSettings<FormUrlParams>>({
+        debounceTime: new FormControl(this.formUrlSettings.DEFAULT_UPDATE_TIME, { nonNullable: true }),
+        queryKey: new FormControl(this.formUrlSettings.DEFAULT_QUERY_KEY, { nonNullable: true }),
+        strategy: new FormControl(this.formUrlSettings.DEFAULT_STRATEGY, { nonNullable: true }),
+    });
 
-    public formParams = this.fb.group<FormUrlParams>(this.defaultParams);
-
-    public readonly formValueChangesSub = this.formParams.valueChanges
-        .pipe(
-            takeUntil(this.destroySubject),
-        ).subscribe(
-            params => {
-                if (params.strategy) {
-                    this.formUrlSettings.strategy = params.strategy;
-                }
-
-                if (params.queryKey) {
-                    this.formUrlSettings.queryKey = params.queryKey;
-                }
-
-                if (params.debounceTime) {
-                    this.formUrlSettings.updateTime = parseInt(`${params.debounceTime}`, 10);
-                }
-
-                // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                this.router.navigate([], { relativeTo: this.route });
-            },
-        );
 
     constructor(
-        private readonly router: Router,
-        private readonly route: ActivatedRoute,
         private readonly fb: FormBuilder,
         private readonly formUrlSettings: FormUrlSettingsService,
     ) {}
+
+    public ngOnInit() {
+        this.formParams.valueChanges
+            .pipe(
+                takeUntil(this.destroySubject),
+            ).subscribe(
+                params => { this.formUrlSettings.patchParams(this.handleParams(params)); },
+            );
+    }
+
+
+    // eslint-disable-next-line complexity
+    public handleParams(params: Partial<FormUrlParams>): Partial<FormUrlParams> {
+
+        const handledParams: Partial<FormUrlParams> = {};
+
+        if (params.strategy && params.strategy !== this.formUrlSettings.params.strategy) {
+            handledParams.strategy = params.strategy;
+        }
+
+        if (params.queryKey && params.queryKey !== this.formUrlSettings.params.queryKey) {
+            handledParams.queryKey = params.queryKey;
+        }
+
+        if (params.debounceTime) {
+            const oldDebounceTime = this.formUrlSettings.params.debounceTime;
+
+            const newDebounceTime = parseInt(`${params.debounceTime}`, 10);
+
+
+            if (oldDebounceTime !== newDebounceTime) {
+                handledParams.debounceTime = newDebounceTime;
+            }
+
+        }
+
+        return handledParams;
+    }
 
     public ngOnDestroy() {
         this.destroySubject.next(true);

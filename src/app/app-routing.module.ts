@@ -17,10 +17,14 @@ const routes: Routes = [
         path: 'second',
         component: SecondPageComponent,
     },
+    {
+        path: '**',
+        redirectTo: 'home',
+    },
 ];
 
 @NgModule({
-    imports: [RouterModule.forRoot(routes)],
+    imports: [RouterModule.forRoot(routes, { onSameUrlNavigation: 'reload' })],
     exports: [RouterModule],
 })
 export class AppRoutingModule {}

@@ -1,9 +1,8 @@
-import { BehaviorSubject, filter, Observable, shareReplay } from 'rxjs';
+import { BehaviorSubject, filter } from 'rxjs';
 import { HttpUrlEncodingCodec } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { isNavigationEnd } from '../utils/is-navigation-end';
 import { Router } from '@angular/router';
-import { shareReplayOneRefBuff } from '../utils/share-replay-one-ref-buffer';
 
 @Injectable({
     providedIn: 'root',
@@ -14,10 +13,7 @@ export class NavigationHistoryService {
 
     private readonly currentUrlBehaviorSubject = new BehaviorSubject<string>('');
 
-    public readonly currentUrlObservable = (this.currentUrlBehaviorSubject as Observable<string>)
-        .pipe(
-            shareReplayOneRefBuff(),
-        );
+    public readonly currentUrlObservable = this.currentUrlBehaviorSubject.asObservable();
 
     public get currentUrl(): string {
         return this.currentUrlBehaviorSubject.value;

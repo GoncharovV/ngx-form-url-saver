@@ -1,10 +1,8 @@
 import { ActivatedRoute, Router } from '@angular/router';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
-import { shareReplayOneRefBuff } from 'src/app/utils/share-replay-one-ref-buffer';
-import { takeUntil, tap } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 
 @Component({
     selector: 'app-home-page',
@@ -29,11 +27,7 @@ export class HomePageComponent implements OnDestroy {
 
     public registerForm = new FormGroup(this.defaultParams);
 
-    public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable
-        .pipe(
-            shareReplayOneRefBuff(),
-            takeUntil(this.destroySubject),
-        );
+    public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable;
 
     constructor(
         private readonly formUrlSettings: FormUrlSettingsService,
