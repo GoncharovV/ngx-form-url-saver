@@ -1,13 +1,10 @@
-import { ActivatedRoute, ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, TrackByFunction } from '@angular/core';
-import { filter, map, Subject, takeUntil, tap } from 'rxjs';
-import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { FormBuilder, FormControl } from '@angular/forms';
+import { FormFields } from 'src/app/models/form-fields-type';
 import { FormUrlParams } from 'src/app/models/form-url-params';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
-
-type FormUrlSettings<T> = {
-    [P in keyof T]: T[P] extends 'object' ? FormGroup<FormUrlSettings<T>> : FormControl<T[P]>;
-};
+import { map, Subject, takeUntil, tap } from 'rxjs';
 
 @Component({
     selector: 'app-form-url-settings',
@@ -25,7 +22,7 @@ export class FormUrlSettingsComponent implements OnInit, OnDestroy {
 
     public trackingStrategy: TrackByFunction<string> = idx => idx;
 
-    public formParams = this.fb.group<FormUrlSettings<FormUrlParams>>({
+    public formParams = this.fb.group<FormFields<FormUrlParams>>({
         debounceTime: new FormControl(this.formUrlSettings.DEFAULT_UPDATE_TIME, { nonNullable: true }),
         queryKey: new FormControl(this.formUrlSettings.DEFAULT_QUERY_KEY, { nonNullable: true }),
         strategy: new FormControl(this.formUrlSettings.DEFAULT_STRATEGY, { nonNullable: true }),
@@ -56,6 +53,7 @@ export class FormUrlSettingsComponent implements OnInit, OnDestroy {
 
     public async reload() {
 
+        // eslint-disable-next-line @typescript-eslint/unbound-method
         const oldStrategy = this.router.routeReuseStrategy.shouldReuseRoute;
 
         this.router.routeReuseStrategy.shouldReuseRoute = () => false;

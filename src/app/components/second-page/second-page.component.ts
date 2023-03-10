@@ -2,7 +2,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
-import { Subject, tap } from 'rxjs';
+import { Subject } from 'rxjs';
 
 interface PaymentForm {
     payments: FormArray<FormGroup<CardInfoForm>>;

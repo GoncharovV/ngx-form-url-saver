@@ -18,7 +18,7 @@ export class ThirdPageComponent {
         progress: new FormControl(this.DEFAULT_PROGRESS_VALUE),
     };
 
-    public registerForm = new FormGroup(this.defaultParams);
+    public differentForm = new FormGroup(this.defaultParams);
 
     public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable;
 

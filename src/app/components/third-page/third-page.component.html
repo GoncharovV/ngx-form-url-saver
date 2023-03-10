@@ -4,7 +4,7 @@
         <form
             class="form"
             *ngIf="formUrlParamsObservable | async as formParams"
-            [ngxFormUrlSaver]="registerForm"
+            [ngxFormUrlSaver]="differentForm"
             [strategy]="formParams.strategy"
             [debounceTime]="formParams.debounceTime"
             [queryKey]="formParams.queryKey"
