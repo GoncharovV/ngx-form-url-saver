@@ -38,11 +38,7 @@ export class SecondPageComponent implements OnDestroy {
         return this.paymentForm.get('payments') as FormArray<FormGroup<CardInfoForm>>;
     }
 
-    public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable.pipe(
-        tap(() => {
-            this.router.navigate([]);
-        }),
-    );
+    public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable;
 
     constructor(
         private readonly formUrlSettings: FormUrlSettingsService,

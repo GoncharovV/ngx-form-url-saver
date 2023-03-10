@@ -10,10 +10,12 @@ import { FormUrlSettingsService } from 'src/app/services/form-url-settings.servi
 })
 export class ThirdPageComponent {
 
+    public readonly DEFAULT_PROGRESS_VALUE = 50;
+
     public readonly defaultParams = {
         color: new FormControl(null),
         range: new FormControl(0),
-        progress: new FormControl(50),
+        progress: new FormControl(this.DEFAULT_PROGRESS_VALUE),
     };
 
     public registerForm = new FormGroup(this.defaultParams);

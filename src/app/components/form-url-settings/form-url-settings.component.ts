@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, TrackByFunction 
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { FormUrlParams } from 'src/app/models/form-url-params';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
-import { Subject, takeUntil } from 'rxjs';
+import { map, Subject, takeUntil, tap } from 'rxjs';
+import { Router } from '@angular/router';
 
 type FormUrlSettings<T> = {
     [P in keyof T]: T[P] extends 'object' ? FormGroup<FormUrlSettings<T>> : FormControl<T[P]>;
@@ -20,6 +21,8 @@ export class FormUrlSettingsComponent implements OnInit, OnDestroy {
 
     public readonly formStrategies: string [] = ['united', 'separated'];
 
+    public readonly shouldReloadSubject = new Subject<boolean>();
+
     public trackingStrategy: TrackByFunction<string> = idx => idx;
 
     public formParams = this.fb.group<FormUrlSettings<FormUrlParams>>({
@@ -32,15 +35,39 @@ export class FormUrlSettingsComponent implements OnInit, OnDestroy {
     constructor(
         private readonly fb: FormBuilder,
         private readonly formUrlSettings: FormUrlSettingsService,
+        private readonly router: Router,
     ) {}
 
     public ngOnInit() {
         this.formParams.valueChanges
             .pipe(
+                map(params => this.handleParams(params)),
+                tap(params => { this.formUrlSettings.patchParams(params); }),
                 takeUntil(this.destroySubject),
-            ).subscribe(
-                params => { this.formUrlSettings.patchParams(this.handleParams(params)); },
-            );
+            ).subscribe();
+
+        this.shouldReloadSubject.asObservable().pipe(
+            tap(() => this.reload()),
+            takeUntil(this.destroySubject),
+        )
+            .subscribe();
+    }
+
+    public async reload() {
+        const url = this.router.url;
+        const regex = /\/\w+/gmi;
+
+        const clearedUrl = url.slice().match(regex)
+            ?.shift();
+
+        if (clearedUrl) {
+            this.router.routeReuseStrategy.shouldReuseRoute = () => false;
+
+            await this.router.navigate([clearedUrl]);
+
+            this.router.routeReuseStrategy.shouldReuseRoute = () => true;
+        }
+
     }
 
 
@@ -66,8 +93,9 @@ export class FormUrlSettingsComponent implements OnInit, OnDestroy {
             if (oldDebounceTime !== newDebounceTime) {
                 handledParams.debounceTime = newDebounceTime;
             }
-
         }
+
+        this.shouldReloadSubject.next(true);
 
         return handledParams;
     }
