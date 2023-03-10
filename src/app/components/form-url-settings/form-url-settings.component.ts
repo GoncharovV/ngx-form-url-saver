@@ -1,9 +1,9 @@
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, TrackByFunction } from '@angular/core';
+import { filter, map, Subject, takeUntil, tap } from 'rxjs';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { FormUrlParams } from 'src/app/models/form-url-params';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
-import { map, Subject, takeUntil, tap } from 'rxjs';
 
 type FormUrlSettings<T> = {
     [P in keyof T]: T[P] extends 'object' ? FormGroup<FormUrlSettings<T>> : FormControl<T[P]>;
@@ -56,11 +56,13 @@ export class FormUrlSettingsComponent implements OnInit, OnDestroy {
 
     public async reload() {
 
+        const oldStrategy = this.router.routeReuseStrategy.shouldReuseRoute;
+
         this.router.routeReuseStrategy.shouldReuseRoute = () => false;
 
-        await this.router.navigate([], { relativeTo: this.route });
+        await this.router.navigate([], { relativeTo: this.route, onSameUrlNavigation: 'reload' });
 
-        this.router.routeReuseStrategy.shouldReuseRoute = () => true;
+        this.router.routeReuseStrategy.shouldReuseRoute = oldStrategy;
 
     }
 
