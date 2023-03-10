@@ -1,9 +1,9 @@
+import { ActivatedRoute, Router } from '@angular/router';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, TrackByFunction } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { FormUrlParams } from 'src/app/models/form-url-params';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
 import { map, Subject, takeUntil, tap } from 'rxjs';
-import { Router } from '@angular/router';
 
 type FormUrlSettings<T> = {
     [P in keyof T]: T[P] extends 'object' ? FormGroup<FormUrlSettings<T>> : FormControl<T[P]>;
@@ -36,6 +36,7 @@ export class FormUrlSettingsComponent implements OnInit, OnDestroy {
         private readonly fb: FormBuilder,
         private readonly formUrlSettings: FormUrlSettingsService,
         private readonly router: Router,
+        private readonly route: ActivatedRoute,
     ) {}
 
     public ngOnInit() {
@@ -54,19 +55,12 @@ export class FormUrlSettingsComponent implements OnInit, OnDestroy {
     }
 
     public async reload() {
-        const url = this.router.url;
-        const regex = /\/\w+/gmi;
 
-        const clearedUrl = url.slice().match(regex)
-            ?.shift();
+        this.router.routeReuseStrategy.shouldReuseRoute = () => false;
 
-        if (clearedUrl) {
-            this.router.routeReuseStrategy.shouldReuseRoute = () => false;
+        await this.router.navigate([], { relativeTo: this.route });
 
-            await this.router.navigate([clearedUrl]);
-
-            this.router.routeReuseStrategy.shouldReuseRoute = () => true;
-        }
+        this.router.routeReuseStrategy.shouldReuseRoute = () => true;
 
     }
 
