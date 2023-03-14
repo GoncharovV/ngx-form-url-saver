@@ -18,7 +18,7 @@ export class BoldTextPipe implements PipeTransform {
 
         const bolderedText = this.sanitize(this.replace(value));
 
-        return bolderedText ? bolderedText : value;
+        return bolderedText ? bolderedText : '';
     }
 
     public replace(source: string): string {
@@ -36,7 +36,8 @@ export class BoldTextPipe implements PipeTransform {
                 const rightSideStr = outString.slice(startIdx);
                 const newRegex = new RegExp(this.pattern, 'mi');
 
-                const rightSideStrReplaced = rightSideStr.replace(newRegex, `<b>${foundString}</b>`);
+                const rightSideStrReplaced = rightSideStr
+                    .replace(newRegex, `<b class="bold">${foundString}</b>`);
 
 
                 outString = leftSideStr + rightSideStrReplaced;

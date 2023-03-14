@@ -37,9 +37,20 @@ export class FormUrlSettingsComponent implements OnInit, OnDestroy {
     ) {}
 
     public ngOnInit() {
+        const storageParams = localStorage.getItem('ngx-params');
+
+        if (storageParams) {
+            const clearParams = JSON.parse(storageParams) as Partial<FormUrlParams>;
+
+            this.formParams.patchValue(clearParams);
+        }
+
         this.formParams.valueChanges
             .pipe(
                 map(params => this.handleParams(params)),
+                tap(params => {
+                    localStorage.setItem('ngx-params', JSON.stringify(params));
+                }),
                 tap(params => { this.formUrlSettings.patchParams(params); }),
                 takeUntil(this.destroySubject),
             ).subscribe();

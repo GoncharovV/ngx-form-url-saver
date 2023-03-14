@@ -25,4 +25,10 @@
     .active {
         background-color: #324191;
     }
+
+
+    ::ng-deep .bold {
+        color: rgb(0 255 123);
+    }
+
 }

@@ -1,7 +1,8 @@
 import { ActivatedRoute, Router } from '@angular/router';
-import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { FormFields } from 'src/app/models/form-fields-type';
+import { FormUrlParams } from 'src/app/models/form-url-params';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
 import { Subject } from 'rxjs';
 
@@ -22,7 +23,7 @@ interface RegisterForm {
     styleUrls: ['./home-page.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomePageComponent implements OnDestroy {
+export class HomePageComponent implements OnInit, OnDestroy {
 
     private readonly destroySubject = new Subject<boolean>();
 
@@ -45,6 +46,16 @@ export class HomePageComponent implements OnDestroy {
         private readonly router: Router,
         private readonly route: ActivatedRoute,
     ) {}
+
+    public ngOnInit(): void {
+        const storageParams = localStorage.getItem('ngx-params');
+
+        if (storageParams) {
+            const clearParams = JSON.parse(storageParams) as Partial<FormUrlParams>;
+
+            this.formUrlSettings.patchParams(clearParams);
+        }
+    }
 
     public ngOnDestroy(): void {
         this.destroySubject.next(true);

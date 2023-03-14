@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
+import { FormUrlParams } from 'src/app/models/form-url-params';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
 
 @Component({
@@ -8,7 +9,7 @@ import { FormUrlSettingsService } from 'src/app/services/form-url-settings.servi
     styleUrls: ['./third-page.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ThirdPageComponent {
+export class ThirdPageComponent implements OnInit {
 
     public readonly DEFAULT_PROGRESS_VALUE = 50;
 
@@ -23,5 +24,15 @@ export class ThirdPageComponent {
     public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable;
 
     constructor(private readonly formUrlSettings: FormUrlSettingsService) {}
+
+    public ngOnInit(): void {
+        const storageParams = localStorage.getItem('ngx-params');
+
+        if (storageParams) {
+            const clearParams = JSON.parse(storageParams) as Partial<FormUrlParams>;
+
+            this.formUrlSettings.patchParams(clearParams);
+        }
+    }
 
 }
