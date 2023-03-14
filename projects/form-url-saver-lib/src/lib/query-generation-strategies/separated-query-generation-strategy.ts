@@ -1,12 +1,12 @@
 import { Params } from '@angular/router';
-import { FormHandlingStrategy } from '../../token';
-import { QueryGenerationStrategy } from './strategy';
+import { QueryGenerationStrategy } from './quey-generation-strategy.interface';
+import { ValueHandlingStrategy } from '../form-value-handling-strategies/value-handling-strategy.interface';
 
 
-export class Separated implements QueryGenerationStrategy {
+export class SeparatedQueryGenerationStrategy implements QueryGenerationStrategy {
 
     public constructor(
-        private readonly formHandlingStrategy: FormHandlingStrategy,
+        private readonly formHandlingStrategy: ValueHandlingStrategy,
     ) { }
 
     public inferFormValueFromQuery(queryParams: Params, formValue: Record<string, unknown>): object {
