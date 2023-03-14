@@ -1,9 +1,9 @@
 import { ActivatedRoute, Router } from '@angular/router';
-import { ChangeDetectionStrategy, Component, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { FormUrlParams } from 'src/app/models/form-url-params';
 import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
-import { shareReplayOneRefBuff } from 'src/app/utils/share-replay-one-ref-buffer';
-import { Subject, takeUntil, tap } from 'rxjs';
+import { Subject } from 'rxjs';
 
 interface PaymentForm {
     payments: FormArray<FormGroup<CardInfoForm>>;
@@ -20,7 +20,7 @@ interface CardInfoForm {
     styleUrls: ['./second-page.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SecondPageComponent implements OnDestroy {
+export class SecondPageComponent implements OnInit, OnDestroy {
 
     private readonly destroySubject = new Subject<boolean>();
 
@@ -39,11 +39,7 @@ export class SecondPageComponent implements OnDestroy {
         return this.paymentForm.get('payments') as FormArray<FormGroup<CardInfoForm>>;
     }
 
-    public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable
-        .pipe(
-            shareReplayOneRefBuff(),
-            takeUntil(this.destroySubject),
-        );
+    public readonly formUrlParamsObservable = this.formUrlSettings.formUrlParamsChangesObservable;
 
     constructor(
         private readonly formUrlSettings: FormUrlSettingsService,
@@ -51,6 +47,16 @@ export class SecondPageComponent implements OnDestroy {
         private readonly route: ActivatedRoute,
         private readonly fb: FormBuilder,
     ) {}
+
+    public ngOnInit(): void {
+        const storageParams = localStorage.getItem('ngx-params');
+
+        if (storageParams) {
+            const clearParams = JSON.parse(storageParams) as Partial<FormUrlParams>;
+
+            this.formUrlSettings.patchParams(clearParams);
+        }
+    }
 
     public ngOnDestroy(): void {
         this.destroySubject.next(true);

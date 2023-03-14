@@ -1,7 +1,7 @@
+import { BehaviorSubject } from 'rxjs';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { filter, Observable } from 'rxjs';
-import { FormUrlSettingsService } from 'src/app/services/form-url-settings.service';
-import { NavigationHistoryService } from 'src/app/services/navigation-history.service';
+import { HttpUrlEncodingCodec } from '@angular/common/http';
+import { Location } from '@angular/common';
 
 @Component({
     selector: 'app-display-navigation',
@@ -11,19 +11,20 @@ import { NavigationHistoryService } from 'src/app/services/navigation-history.se
 })
 export class DisplayNavigationComponent {
 
-    public readonly urlObservable: Observable<string> = this.navigationHistory.currentUrlObservable.pipe(
-        filter(url => this.isNotNull(url)),
-    );
+    private readonly codec = new HttpUrlEncodingCodec();
 
-    public isNotNull(url: string | null | undefined): boolean {
-        return Boolean(url);
-    }
+    public readonly urlBehaviorSubject = new BehaviorSubject<string>('');
 
-    public strategy = this.formUrlSettings.strategy;
+    public readonly urlObservable = this.urlBehaviorSubject.asObservable();
 
     constructor(
-        private readonly navigationHistory: NavigationHistoryService,
-        private readonly formUrlSettings: FormUrlSettingsService,
-    ) {}
+        private readonly location: Location,
+    ) {
+        this.location.onUrlChange(url => {
+            const decodedUrl = this.codec.decodeValue(url);
+
+            this.urlBehaviorSubject.next(decodedUrl);
+        });
+    }
 
 }

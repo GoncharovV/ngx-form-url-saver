@@ -1,6 +1,6 @@
-import { Separated } from './strategies/separated-form.strategy';
-import { United } from './strategies/united-form.strategy';
-import { QueryGenerationStrategy } from './strategies/strategy';
+import { SeparatedQueryGenerationStrategy } from './query-generation-strategies/separated-query-generation-strategy';
+import { UnitedQueryGenerationStrategy } from './query-generation-strategies/united-query-generation-strategy';
+import { QueryGenerationStrategy } from './query-generation-strategies/quey-generation-strategy.interface';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AfterViewInit, Directive, forwardRef, Inject, Input, OnDestroy, Optional, Self } from '@angular/core';
 import {
@@ -15,7 +15,8 @@ import {
     ValidatorFn,
 } from '@angular/forms';
 import { debounceTime, map, startWith, Subscription } from 'rxjs';
-import { FormHandlingStrategy, FormHandlingStrategyToken } from '../token';
+import { FORM_VALUE_HANDLING_TOKEN } from './form-value-handling-strategies/token';
+import { ValueHandlingStrategy } from './form-value-handling-strategies/value-handling-strategy.interface';
 
 const formDirectiveProvider = {
     provide: ControlContainer,
@@ -27,15 +28,18 @@ const formDirectiveProvider = {
  * Директива является наследником Angular `FormGroupDirective`
  * и используется для автоматической записи значения `FormGroup` в query-параметры.
  *
+ * {@link https://github.com/angular/angular/blob/main/packages/forms/src/directives/reactive_directives/form_group_directive.ts Angular FormGroupDirective}
+ *
  * Позволяет установить задержку (_debounce_) обновления query.
  *
- * TODO: Прокомментировать принцип работы после изменения логики
+ * Позволяет выбрать способ (_strategy_) записи query-параметров.
+ * 'united' - значение формы будет полностью записано в одном параметре
+ * 'separated' - каждое поле формы будет записано в своем query-параметре.
  *
- * @property {number} `debounceTime` - Время задержки.
+ * Существует возможность переопределить поведение по преобразованию значения формы к строке.
+ * По умолчанию используется JSON.stringify.
+ * Воспользуйтесь интерфейсом ValueHandlingStrategy и FORM_VALUE_HANDLING_TOKEN
  *
- * @property {UntypedFormGroup} `form` - ссылка на форму.
- *
- * {@link https://github.com/angular/angular/blob/main/packages/forms/src/directives/reactive_directives/form_group_directive.ts Angular FormGroupDirective}
  */
 @Directive({
     selector: '[ngxFormUrlSaver]',
@@ -48,25 +52,38 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     @Input('ngxFormUrlSaver')
     public override form: UntypedFormGroup = null!;
 
+    /**
+     * Время задержки обновления query-параметров
+     */
     @Input()
     public debounceTime = this.BASE_DEBOUNCE_TIME;
 
-    @Input()
-    public queryKey = 'form';
-
+    /**
+     * Стратегия создания query-параметров.
+     *
+     * Если указано 'united' - значение формы будет полностью записано по ключу одного query-параметра
+     *
+     * Если указано 'separated' - каждое поле формы будет записано отдельным ключом, соответствующим его названию в форме
+     */
     @Input()
     public strategy: 'united' | 'separated' = 'united';
 
-    private filtersChangesSubscription?: Subscription;
+    /**
+     * Ключ, по которому будет записано значение формы, если выбрано 'united' стратегия.
+     */
+    @Input()
+    public queryKey = 'form';
+
+    private formValueChangedSubscription?: Subscription;
 
     private queryStrategy!: QueryGenerationStrategy;
 
-    constructor(
+    public constructor(
         private readonly router: Router,
         private readonly activatedRoute: ActivatedRoute,
 
-        @Inject(FormHandlingStrategyToken)
-        private readonly formHandlingStrategy: FormHandlingStrategy,
+        @Inject(FORM_VALUE_HANDLING_TOKEN)
+        private readonly formHandlingStrategy: ValueHandlingStrategy,
 
         /**
          * Default Angular FormGroupDirective dependencies
@@ -92,7 +109,7 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     public override ngOnDestroy(): void {
         super.ngOnDestroy();
 
-        this.filtersChangesSubscription?.unsubscribe();
+        this.formValueChangedSubscription?.unsubscribe();
 
         this.clearFormQuery();
     }
@@ -100,23 +117,25 @@ export class FormUrlSaverDirective extends FormGroupDirective implements AfterVi
     // #endregion
 
     private fillFormFromQuery() {
-        this.form.patchValue(
-            this.queryStrategy.inferFormValueFromQuery(this.activatedRoute.snapshot.queryParams, this.form.value)
-        );
+        const currentQueryParams = this.activatedRoute.snapshot.queryParams;
+
+        const inferedFormValue =  this.queryStrategy.inferFormValueFromQuery(currentQueryParams, this.form.value);
+
+        this.form.patchValue(inferedFormValue);
 
         this.subscribeToFormValueChanges();
     }
 
-    public createQueryHandlingStrategy() {
+    private createQueryHandlingStrategy() {
         if (this.strategy === 'united') {
-            return new United(this.formHandlingStrategy, this.queryKey);
+            return new UnitedQueryGenerationStrategy(this.formHandlingStrategy, this.queryKey);
         } else {
-            return new Separated(this.formHandlingStrategy);
+            return new SeparatedQueryGenerationStrategy(this.formHandlingStrategy);
         }
     }
 
     private subscribeToFormValueChanges() {
-        this.filtersChangesSubscription = this.form.valueChanges.pipe(
+        this.formValueChangedSubscription = this.form.valueChanges.pipe(
             startWith(this.form.value),
             debounceTime(this.debounceTime),
             map((value, index) => [value, index] as const),

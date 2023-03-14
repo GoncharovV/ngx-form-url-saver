@@ -1,16 +1,15 @@
-import { AfterViewInit, Component, OnDestroy, OnInit } from "@angular/core";
-import { ComponentFixture, TestBed } from "@angular/core/testing";
-import { FormUrlSaverDirective } from "./form-url-saver.directive";
-import { RouterTestingModule } from "@angular/router/testing";
-import { FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule } from "@angular/forms";
-import { ActivatedRoute, Router, RouterModule, UrlSegment } from "@angular/router";
-import { BehaviorSubject, Observable, combineLatest, debounceTime, map, of, shareReplay, skip, startWith, takeUntil, tap } from "rxjs";
-import * as _ from "lodash";
-import { TestScheduler } from "rxjs/testing";
-import { ArticleType } from "../enums/article-type";
-import { Article } from "../models/article";
-import { ArticleInRoute } from "../models/article-in-route";
-import { ArticleBuilder } from "../models/article-builder";
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormUrlSaverDirective } from './form-url-saver.directive';
+import { RouterTestingModule } from '@angular/router/testing';
+import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { BehaviorSubject, map, shareReplay, skip, startWith, takeUntil, tap } from 'rxjs';
+import { TestScheduler } from 'rxjs/testing';
+import { ArticleType } from '../../tests/enums/article-type';
+import { Article } from '../../tests/models/article';
+import { ArticleInRoute } from '../../tests/models/article-in-route';
+import { ArticleBuilder } from '../../tests/models/article-builder';
 
 const initQueryParams = {
   id: '10',

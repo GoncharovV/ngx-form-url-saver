@@ -1,21 +1,18 @@
-import { FormHandlingStrategy } from './../../token';
 import { Params } from '@angular/router';
-import { QueryGenerationStrategy } from './strategy';
+import { QueryGenerationStrategy } from './quey-generation-strategy.interface';
+import { ValueHandlingStrategy } from '../form-value-handling-strategies/value-handling-strategy.interface';
 
 
-export class United implements QueryGenerationStrategy {
+export class UnitedQueryGenerationStrategy implements QueryGenerationStrategy {
 
 
     public constructor(
-        private readonly formHandlingStrategy: FormHandlingStrategy,
+        private readonly formHandlingStrategy: ValueHandlingStrategy,
         private readonly queryKey: string,
     ) { }
 
     public inferFormValueFromQuery(queryParams: Params): object {
         const query = queryParams[this.queryKey] as string;
-
-        console.log('here we ate', queryParams);
-
 
         if (!query) {
             return {};
@@ -27,7 +24,7 @@ export class United implements QueryGenerationStrategy {
     }
 
 
-    public convertFormValueToQueryObject(formValue: object): object {
+    public convertFormValueToQueryObject(formValue: Record<string, unknown>): object {
         const serializedObject = this.formHandlingStrategy.stringify(formValue);
 
         return {
